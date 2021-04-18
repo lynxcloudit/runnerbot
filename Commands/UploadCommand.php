@@ -129,7 +129,7 @@ class UploadCommand extends UserCommand
         $newfilename = strtoupper(uniqid()) . '.' . end($temp);
         if(rename($tempfile, $path."/".$newfilename))
         {
-            //  if($clamav->scan("/ssda1/www/portal.runpolito.it/lib/tmp/".$newfilename)) 
+            //  if($clamav->scan("".$newfilename)) 
             //   {
                 $mime = mime_content_type($path."/".$newfilename);
                 $extp = explode("/", $mime);
