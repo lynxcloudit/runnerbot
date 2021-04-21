@@ -74,7 +74,7 @@ class ShortenCommand extends UserCommand
             if($reply != NULL)
             {
                 $replytext1 = $reply->getText();
-                $result = json_decode($this->shorten($replytext1, $text, $user_id), true);
+                $result = json_decode($this->shorten($replytext1, strtolower($text), $user_id), true);
                 $replytext = $result['message']."\n\nShortened link: ".$result['shorturl']."\n\nQR Code: ".$result['shorturl'].".qr\n\nStats: ".$result['shorturl']."+";
                 
             }
