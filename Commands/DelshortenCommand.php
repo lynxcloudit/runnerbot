@@ -17,12 +17,12 @@ use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 
-class ShortenCommand extends UserCommand
+class DelshortenCommand extends UserCommand
 {
     /**
      * @var string
      */
-    protected $name = 'shorten';
+    protected $name = 'delshorten';
 
     /**
      * @var string
@@ -32,7 +32,7 @@ class ShortenCommand extends UserCommand
     /**
      * @var string
      */
-    protected $usage = '/shorten <custom url>';
+    protected $usage = '/delshorten <short url>';
 
     /**
      * @var string
@@ -70,17 +70,28 @@ class ShortenCommand extends UserCommand
         }
         else
         {
-            $reply  = $message->getReplyToMessage();
-            if($reply != NULL)
+            if($text != NULL)
             {
-                $replytext1 = $reply->getText();
-                $result = json_decode($this->shorten($replytext1, strtolower($text), $user_id), true);
-                $replytext = $result['message']."\n\nShortened link: ".$result['shorturl']."\n\nQR Code: ".$result['shorturl'].".qr\n\nStats: ".$result['shorturl']."+";
+                $url = strtolower($text);
+                $result = json_decode($this->delshorten($url, $user_id), true);
+                
+                switch ($result['message']) {
+                    case "success: deleted":
+                        $replytext = "Shortened link ".$url." succesfully deleted.";
+                        break;
+                    case "error: not found":
+                        $replytext = "Shortened link ".$url." doesn't exist: maybe it has already been deleted?";                        
+                        break;
+                        
+                    default:
+                        $replytext = "Whoops! An error occurred, ".$url." not deleted. Contact IT support (".$config['itsupport']."). Diag: ".$result['message'];
+                        break;
+                }
                 
             }
             else
             {
-                $replytext = "Devi inserire un link da accorciare come risposta al comando /shorten. Scrivi /shorten help per ulteriori info";
+                $replytext = "Devi inserire un link accorciato da eliminare /shorten <link>. Scrivi /shorten help per ulteriori info";
             }
         }
         $data_tlg = [
@@ -93,7 +104,7 @@ class ShortenCommand extends UserCommand
     }
     
     
-    private function shorten($url, $keyword, $userid)
+    private function delshorten($url, $userid)
     {
         $config = require __DIR__ . '/../config.php';
         $yls = $config['yourls'];
@@ -112,11 +123,9 @@ class ShortenCommand extends UserCommand
         curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true ); // Return, do not echo result
         curl_setopt( $ch, CURLOPT_POST, 1 );              // This is a POST request
         curl_setopt( $ch, CURLOPT_POSTFIELDS, array(      // Data to POST
-		'url'      => $url,
-		'keyword'  => $keyword,
-		'title'    => "",
+		'shorturl'      => $url,
 		'format'   => $format,
-		'action'   => 'shorturl',
+		'action'   => 'delete',
 		'timestamp' => $timestamp,
 		'signature' => $signature
 	) );
@@ -128,14 +137,10 @@ class ShortenCommand extends UserCommand
         $jsr = json_decode($data, true);
         if($jsr['statusCode'] == "200")
         {
-            $surl = $jsr['shorturl'];
-            $timest = time();
-            $owner = "TELEGRAMBOT_".$userid;
-            $from = $_SERVER['SERVER_NAME'];
             $rundb = $config['rundb'];
             $mysqli = new \mysqli($rundb['host'], $rundb['user'], $rundb['password'], $rundb['database']);  
-            $query = $mysqli->prepare("INSERT INTO `shortener`(`shorturl`, `owner`, `creato`, `from_serv`) VALUES (?,?,?,?)");
-            $query->bind_param('ssis',$surl,$owner,$timest,$from);
+            $query = $mysqli->prepare("DELETE FROM `shortener` WHERE shorturl = ?");
+            $query->bind_param('s',$url);
             $query->execute();
         }
 
